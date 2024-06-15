@@ -4,7 +4,11 @@ import Input from "../../ui/Input";
 import Form from "../../ui/Form";
 import Button from "../../ui/Button";
 import FileInput from "../../ui/FileInput";
-import Textarea from "../../ui/Textarea";
+import { Textarea } from "../../ui/Textarea";
+import { useForm } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { insertCabin } from "../../services/apiCabins";
+import toast from "react-hot-toast";
 
 const FormRow = styled.div`
   display: grid;
@@ -43,36 +47,117 @@ const Error = styled.span`
 `;
 
 function CreateCabinForm() {
+  const { register, handleSubmit, reset, getValues, formState } = useForm();
+  const { errors } = formState;
+  const clientQuery = useQueryClient();
+  const { isLoading, mutate } = useMutation({
+    mutationFn: insertCabin,
+    onSuccess: () => {
+      toast.success("Cabins succesfully Created");
+      clientQuery.invalidateQueries(["cabin"]);
+      reset();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  function submit(data) {
+    // console.log(data.image[0]);
+    mutate({ ...data, image: data.image[0] });
+  }
+  function handleError(error) {
+    console.log(error);
+  }
   return (
-    <Form>
+    <Form onSubmit={handleSubmit(submit, handleError)}>
       <FormRow>
         <Label htmlFor="name">Cabin name</Label>
-        <Input type="text" id="name" />
+        <Input
+          type="text"
+          id="name"
+          {...register("name", {
+            required: "This field can not be empty",
+          })}
+        />
+        {errors?.name?.message && <Error>{errors?.name?.message} </Error>}
       </FormRow>
 
       <FormRow>
         <Label htmlFor="maxCapacity">Maximum capacity</Label>
-        <Input type="number" id="maxCapacity" />
+        <Input
+          type="number"
+          id="maxCapacity"
+          {...register("maxCapacity", {
+            required: "This field can not be empty",
+            min: {
+              value: 1,
+            },
+          })}
+        />
+        {errors?.maxCapacity?.message && (
+          <Error>{errors?.maxCapacity?.message} </Error>
+        )}
       </FormRow>
 
       <FormRow>
         <Label htmlFor="regularPrice">Regular price</Label>
-        <Input type="number" id="regularPrice" />
+        <Input
+          type="number"
+          id="regularPrice"
+          {...register("regularPrice", {
+            required: "This field can not be empty",
+          })}
+        />
+        {errors?.regularPrice?.message && (
+          <Error>{errors?.regularPrice?.message} </Error>
+        )}
       </FormRow>
 
       <FormRow>
         <Label htmlFor="discount">Discount</Label>
-        <Input type="number" id="discount" defaultValue={0} />
+        <Input
+          type="number"
+          id="discount"
+          defaultValue={0}
+          {...register("discount", {
+            required: "This field can not be empty",
+            validate: (value) => {
+              return (
+                value <= getValues().regularPrice ||
+                "the  discount price should be less than regular price "
+              );
+            },
+          })}
+        />
+        {errors?.discount?.message && (
+          <Error>{errors?.discount?.message} </Error>
+        )}
       </FormRow>
 
       <FormRow>
         <Label htmlFor="description">Description for website</Label>
-        <Textarea type="number" id="description" defaultValue="" />
+        <Textarea
+          type="number"
+          id="description"
+          defaultValue=""
+          {...register("description", {
+            required: "This field can not be empty",
+          })}
+        />
+        {errors?.description?.message && (
+          <Error>{errors?.description?.message} </Error>
+        )}
       </FormRow>
 
       <FormRow>
         <Label htmlFor="image">Cabin photo</Label>
-        <FileInput id="image" accept="image/*" />
+        <FileInput
+          id="image"
+          accept="image/*"
+          type="file"
+          {...register("image", {
+            required: "This field can not be empty",
+          })}
+        />
+        {errors?.image?.message && <Error>{errors?.image?.message} </Error>}
       </FormRow>
 
       <FormRow>
@@ -80,7 +165,7 @@ function CreateCabinForm() {
         <Button variation="secondary" type="reset">
           Cancel
         </Button>
-        <Button>Edit cabin</Button>
+        <Button disabled={isLoading}>Add cabin</Button>
       </FormRow>
     </Form>
   );
